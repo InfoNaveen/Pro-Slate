@@ -1,5 +1,3 @@
-<div align="center">
-  <img src="https://via.placeholder.com/150x150/1A1A2E/FFFFFF?text=PS" alt="ProSlate Logo" width="120" />
 
   # ⚡ ProSlate
 
