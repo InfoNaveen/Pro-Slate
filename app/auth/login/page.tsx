@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +29,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
-
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
@@ -38,26 +36,22 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError('');
-    const { error: authError, data: authData } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
+    
+    // Mock login logic based on email
+    let role = 'homeowner';
+    if (data.email.includes('b2b')) role = 'b2b_client';
+    if (data.email.includes('worker')) role = 'worker';
+    if (data.email.includes('admin')) role = 'admin';
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
+    // Set mock cookies
+    document.cookie = `mock_auth=true; path=/; max-age=86400`;
+    document.cookie = `mock_role=${role}; path=/; max-age=86400`;
 
-    if (authData.session) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authData.session.user.id)
-        .single();
-      const role = profile?.role ?? 'homeowner';
+    // Simulate network delay
+    setTimeout(() => {
       router.push(ROLE_REDIRECTS[role] ?? '/dashboard/homeowner');
-    }
+      router.refresh(); // Refresh to ensure middleware catches the new cookie
+    }, 500);
   };
 
   return (

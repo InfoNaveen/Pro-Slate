@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +30,6 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -48,52 +47,20 @@ export default function SignupPage() {
 
     const role = getRole();
 
-    const { error: authError, data: authData } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: { full_name: data.full_name, role },
-      },
-    });
+    // Set mock cookies
+    document.cookie = `mock_auth=true; path=/; max-age=86400`;
+    document.cookie = `mock_role=${role}; path=/; max-age=86400`;
+    
+    const redirects: Record<string, string> = {
+      homeowner: '/dashboard/homeowner',
+      b2b_client: '/dashboard/b2b',
+      worker: '/dashboard/worker',
+    };
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (authData.user) {
-      // Upsert profile
-      await supabase.from('profiles').upsert({
-        id: authData.user.id,
-        full_name: data.full_name,
-        phone: data.phone ?? null,
-        role,
-      });
-
-      if (role === 'worker') {
-        await supabase.from('worker_profiles').upsert({
-          id: authData.user.id,
-          specializations: [],
-          badge: 'Rookie',
-        });
-      }
-
-      if (role === 'b2b_client' && data.company_name) {
-        await supabase.from('b2b_client_profiles').upsert({
-          id: authData.user.id,
-          company_name: data.company_name,
-          company_type: 'builder',
-        });
-      }
-
-      const redirects: Record<string, string> = {
-        homeowner: '/dashboard/homeowner',
-        b2b_client: '/dashboard/b2b',
-        worker: '/dashboard/worker',
-      };
+    setTimeout(() => {
       router.push(redirects[role] ?? '/dashboard/homeowner');
-    }
+      router.refresh();
+    }, 500);
   };
 
   return (
